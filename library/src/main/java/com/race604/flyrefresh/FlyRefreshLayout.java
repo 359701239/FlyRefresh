@@ -11,7 +11,7 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 
-import com.race604.flyrefresh.internal.MountanScenceView;
+import com.race604.flyrefresh.internal.MountainScenesView;
 import com.race604.flyrefresh.internal.SimpleAnimatorListener;
 import com.race604.utils.UIUtils;
 
@@ -22,6 +22,7 @@ public class FlyRefreshLayout extends PullHeaderLayout {
 
     private AnimatorSet mFlyAnimator = null;
     private OnPullRefreshListener mListener;
+    private boolean isRefreshing = false;
 
     public FlyRefreshLayout(Context context) {
         super(context);
@@ -39,7 +40,7 @@ public class FlyRefreshLayout extends PullHeaderLayout {
     }
 
     private void init(Context context) {
-        MountanScenceView headerView = new MountanScenceView(getContext());
+        MountainScenesView headerView = new MountainScenesView(getContext());
         LayoutParams lp = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, mHeaderController.getMaxHeight());
         setHeaderView(headerView, lp);
     }
@@ -50,15 +51,15 @@ public class FlyRefreshLayout extends PullHeaderLayout {
 
         // Set default action icon if user not override
         if (getIconView() == null) {
-            setActionDrawable(getResources().getDrawable(R.mipmap.ic_send));
+            setActionDrawable(getResources().getDrawable(R.drawable.ic_send));
         }
     }
 
     @Override
     public void startRefresh() {
 
-        if (mFlyAnimator != null) {
-            mFlyAnimator.end();
+        if ((mFlyAnimator != null && mFlyAnimator.isRunning()) || isRefreshing) {
+            return;
         }
 
         final View iconView = getIconView();
@@ -83,6 +84,7 @@ public class FlyRefreshLayout extends PullHeaderLayout {
 
         mFlyAnimator = flyUpAnim;
         mFlyAnimator.start();
+        isRefreshing = true;
 
         if (mListener != null) {
             mListener.onRefresh(FlyRefreshLayout.this);
@@ -94,8 +96,8 @@ public class FlyRefreshLayout extends PullHeaderLayout {
     }
 
     public void onRefreshFinish() {
-        if (mFlyAnimator != null) {
-            mFlyAnimator.cancel();
+        if (mFlyAnimator != null && mFlyAnimator.isRunning()) {
+            return;
         }
 
         final View iconView = getIconView();
@@ -145,6 +147,7 @@ public class FlyRefreshLayout extends PullHeaderLayout {
             @Override
             public void onAnimationEnd(Animator animation) {
                 if (mListener != null) {
+                    isRefreshing = false;
                     mListener.onRefreshAnimationEnd(FlyRefreshLayout.this);
                 }
             }
@@ -162,6 +165,7 @@ public class FlyRefreshLayout extends PullHeaderLayout {
 
     public interface OnPullRefreshListener {
         void onRefresh(FlyRefreshLayout view);
+
         void onRefreshAnimationEnd(FlyRefreshLayout view);
     }
 }

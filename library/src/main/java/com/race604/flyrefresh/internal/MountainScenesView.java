@@ -20,7 +20,7 @@ import com.race604.flyrefresh.PullHeaderLayout;
 /**
  * Created by jing on 15-5-28.
  */
-public class MountanScenceView extends View implements IPullHeader {
+public class MountainScenesView extends View implements IPullHeader {
 
     private static final int COLOR_BACKGROUND = Color.parseColor("#7ECEC9");
     private static final int COLOR_MOUNTAIN_1 = Color.parseColor("#86DAD7");
@@ -57,23 +57,23 @@ public class MountanScenceView extends View implements IPullHeader {
     private float mTreeBendFactor = Float.MAX_VALUE;
     private Matrix mTransMatrix = new Matrix();
 
-    public MountanScenceView(Context context) {
+    public MountainScenesView(Context context) {
         super(context);
         init();
     }
 
-    public MountanScenceView(Context context, AttributeSet attrs) {
+    public MountainScenesView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public MountanScenceView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public MountainScenesView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public MountanScenceView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public MountainScenesView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init();
     }
@@ -110,7 +110,7 @@ public class MountanScenceView extends View implements IPullHeader {
         mTransMatrix.reset();
         mTransMatrix.setScale(mScaleX, mScaleY);
 
-        int offset1 = (int) (10 * factor);
+        float offset1 = 10 * factor;
         mMount1.reset();
         mMount1.moveTo(0, 95 + offset1);
         mMount1.lineTo(55, 74 + offset1);
@@ -122,7 +122,7 @@ public class MountanScenceView extends View implements IPullHeader {
         mMount1.close();
         mMount1.transform(mTransMatrix);
 
-        int offset2 = (int) (20 * factor);
+        float offset2 = 20 * factor;
         mMount2.reset();
         mMount2.moveTo(0, 103 + offset2);
         mMount2.lineTo(67, 90 + offset2);
@@ -134,7 +134,7 @@ public class MountanScenceView extends View implements IPullHeader {
         mMount2.close();
         mMount2.transform(mTransMatrix);
 
-        int offset3 = (int) (30 * factor);
+        float offset3 = 30 * factor;
         mMount3.reset();
         mMount3.moveTo(0, 114 + offset3);
         mMount3.cubicTo(30, 106 + offset3, 196, 97 + offset3, WIDTH, 104 + offset3);
@@ -276,10 +276,10 @@ public class MountanScenceView extends View implements IPullHeader {
                 COLOR_TREE_1_BTRUNK, COLOR_TREE_1_BRANCH);
 
         drawTree(canvas, 0.14f * mScaleX, 180 * mScaleX, (105 + 30 * mMoveFactor) * mScaleY,
-                COLOR_TREE_2_BTRUNK ,COLOR_TREE_2_BRANCH);
+                COLOR_TREE_2_BTRUNK, COLOR_TREE_2_BRANCH);
 
         drawTree(canvas, 0.16f * mScaleX, 140 * mScaleX, (105 + 30 * mMoveFactor) * mScaleY,
-                COLOR_TREE_2_BTRUNK ,COLOR_TREE_2_BRANCH);
+                COLOR_TREE_2_BTRUNK, COLOR_TREE_2_BRANCH);
 
         mMountPaint.setColor(COLOR_MOUNTAIN_3);
         canvas.drawPath(mMount3, mMountPaint);

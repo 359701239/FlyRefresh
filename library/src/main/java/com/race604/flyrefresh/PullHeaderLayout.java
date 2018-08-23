@@ -6,18 +6,13 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.ShapeDrawable;
-import android.graphics.drawable.shapes.OvalShape;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.view.MotionEventCompat;
 import android.support.v4.view.NestedScrollingChild;
 import android.support.v4.view.NestedScrollingChildHelper;
 import android.support.v4.view.NestedScrollingParent;
 import android.support.v4.view.NestedScrollingParentHelper;
-import android.support.v4.view.VelocityTrackerCompat;
 import android.support.v4.view.ViewCompat;
-import android.support.v4.widget.ScrollerCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -26,9 +21,10 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
+import android.widget.OverScroller;
 
-import com.race604.flyrefresh.internal.ElasticOutInterpolator;
 import com.race604.flyrefresh.internal.SimpleAnimatorListener;
 import com.race604.utils.UIUtils;
 
@@ -38,7 +34,6 @@ import com.race604.utils.UIUtils;
 public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent, NestedScrollingChild {
 
     private static final String TAG = PullHeaderLayout.class.getCanonicalName();
-    private static final boolean D = true;
 
     public static final int STATE_IDLE = 0;
     public static final int STATE_DRAGE = 1;
@@ -55,7 +50,6 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     private int mContentId = 0;
 
     private Drawable mActionDrawable;
-    private FloatingActionButton mActionView;
     private ImageView mFlyView;
     private View mHeaderView;
     private IPullHeader mPullHeaderView;
@@ -82,7 +76,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     private final NestedScrollingParentHelper mParentHelper;
     private final NestedScrollingChildHelper mChildHelper;
 
-    private ScrollerCompat mScroller;
+    private OverScroller mScroller;
 
     private OnPullListener mPullListener;
 
@@ -131,7 +125,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     }
 
     private void init() {
-        mScroller = ScrollerCompat.create(getContext());
+        mScroller = new OverScroller(getContext());
         final ViewConfiguration configuration = ViewConfiguration.get(getContext());
         mTouchSlop = configuration.getScaledTouchSlop();
         mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
@@ -190,23 +184,23 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     // NestedScrollingParent
 
     @Override
-    public boolean onStartNestedScroll(View child, View target, int nestedScrollAxes) {
+    public boolean onStartNestedScroll(@NonNull View child, @NonNull View target, int nestedScrollAxes) {
         return (nestedScrollAxes & ViewCompat.SCROLL_AXIS_VERTICAL) != 0;
     }
 
     @Override
-    public void onNestedScrollAccepted(View child, View target, int nestedScrollAxes) {
+    public void onNestedScrollAccepted(@NonNull View child, @NonNull View target, int nestedScrollAxes) {
         mParentHelper.onNestedScrollAccepted(child, target, nestedScrollAxes);
         startNestedScroll(ViewCompat.SCROLL_AXIS_VERTICAL);
     }
 
     @Override
-    public void onStopNestedScroll(View target) {
+    public void onStopNestedScroll(@NonNull View target) {
         stopNestedScroll();
     }
 
     @Override
-    public void onNestedScroll(View target, int dxConsumed, int dyConsumed, int dxUnconsumed,
+    public void onNestedScroll(@NonNull View target, int dxConsumed, int dyConsumed, int dxUnconsumed,
                                int dyUnconsumed) {
         final int myConsumed = moveBy(dyUnconsumed);
         final int myUnconsumed = dyUnconsumed - myConsumed;
@@ -214,7 +208,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     }
 
     @Override
-    public void onNestedPreScroll(View target, int dx, int dy, int[] consumed) {
+    public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed) {
         if (dy > 0 && mHeaderController.canScrollUp()) {
             final int delta = moveBy(dy);
             consumed[0] = 0;
@@ -224,7 +218,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     }
 
     @Override
-    public boolean onNestedFling(View target, float velocityX, float velocityY, boolean consumed) {
+    public boolean onNestedFling(@NonNull View target, float velocityX, float velocityY, boolean consumed) {
         if (!consumed) {
             flingWithNestedDispatch((int) velocityY);
             return true;
@@ -245,7 +239,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     }
 
     @Override
-    public boolean onNestedPreFling(View target, float velocityX, float velocityY) {
+    public boolean onNestedPreFling(@NonNull View target, float velocityX, float velocityY) {
         return flingWithNestedDispatch((int) velocityY);
     }
 
@@ -268,33 +262,17 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     public void setActionDrawable(Drawable actionDrawable) {
         mActionDrawable = actionDrawable;
         if (mActionDrawable != null) {
-            if (mActionView == null) {
-                final int bgColor = UIUtils.getThemeColorFromAttrOrRes(getContext(), R.attr.colorAccent, R.color.accent);
-                final int pressedColor = UIUtils.darkerColor(bgColor, 0.8f);
-
-                final ShapeDrawable bgDrawable = new ShapeDrawable(new OvalShape());
-                bgDrawable.getPaint().setColor(bgColor);
-                mActionView = new FloatingActionButton(getContext());
-                mActionView.setRippleColor(pressedColor);
-                mActionView.setBackgroundDrawable(bgDrawable);
-                addView(mActionView, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            }
-
             if (mFlyView == null) {
                 mFlyView = new ImageView(getContext());
-                mFlyView.setScaleType(ImageView.ScaleType.FIT_XY);
+                mFlyView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                 addView(mFlyView, new LayoutParams(ACTION_ICON_SIZE, ACTION_ICON_SIZE));
                 mFlyView.bringToFront();
-                float elevation = ViewCompat.getElevation(mActionView);
-                ViewCompat.setElevation(mFlyView, elevation + 1);
+                ViewCompat.setElevation(mFlyView, 4);
             }
             mFlyView.setImageDrawable(mActionDrawable);
-
         } else {
-            if (mActionView != null) {
-                removeView(mActionView);
+            if (mFlyView != null) {
                 removeView(mFlyView);
-                mActionView = null;
                 mFlyView = null;
             }
         }
@@ -303,11 +281,6 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     @Nullable
     public View getIconView() {
         return mFlyView;
-    }
-
-    @Nullable
-    public FloatingActionButton getHeaderActionButton() {
-        return mActionView;
     }
 
     public void setHeaderView(View headerView, LayoutParams lp) {
@@ -388,8 +361,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
             measureChildWithMargins(mContent, widthMeasureSpec, 0, heightMeasureSpec, mHeaderController.getMinHeight());
         }
 
-        if (mActionView != null) {
-            measureChild(mActionView, widthMeasureSpec, heightMeasureSpec);
+        if (mFlyView != null) {
             measureChild(mFlyView, widthMeasureSpec, heightMeasureSpec);
         }
     }
@@ -422,18 +394,12 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
             mContent.layout(left, top, right, bottom);
         }
 
-        if (mActionView != null) {
+        if (mFlyView != null) {
             final int center = ACTION_BUTTON_CENTER;
-            int halfWidth = (mActionView.getMeasuredWidth() + 1) / 2;
-            int halfHeight = (mActionView.getMeasuredHeight() + 1) / 2;
-
-            mActionView.layout(center - halfWidth , offsetY - halfHeight,
-                    center + halfWidth, offsetY + halfHeight);
-
-            halfWidth = (mFlyView.getMeasuredWidth() + 1) / 2;
-            halfHeight = (mFlyView.getMeasuredHeight() + 1) / 2;
-            mFlyView.layout(center - halfWidth, offsetY - halfHeight,
-                    center + halfWidth, offsetY + halfHeight);
+            int halfWidth = (mFlyView.getMeasuredWidth() + 1) / 2;
+            int halfHeight = (mFlyView.getMeasuredHeight() + 1) / 2;
+            mFlyView.layout(center - halfWidth, offsetY - center - halfHeight,
+                    center + halfWidth, offsetY - center + halfHeight);
         }
 
     }
@@ -461,16 +427,16 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     }
 
     private void onSecondaryPointerUp(MotionEvent ev) {
-        final int pointerIndex = (ev.getAction() & MotionEventCompat.ACTION_POINTER_INDEX_MASK) >>
-                MotionEventCompat.ACTION_POINTER_INDEX_SHIFT;
-        final int pointerId = MotionEventCompat.getPointerId(ev, pointerIndex);
+        final int pointerIndex = (ev.getAction() & MotionEvent.ACTION_POINTER_INDEX_MASK) >>
+                MotionEvent.ACTION_POINTER_INDEX_SHIFT;
+        final int pointerId = ev.getPointerId(pointerIndex);
         if (pointerId == mActivePointerId) {
             // This was our active pointer going up. Choose a new
             // active pointer and adjust accordingly.
             // TODO: Make this decision more intelligent.
             final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
-            mLastMotionY = (int) MotionEventCompat.getY(ev, newPointerIndex);
-            mActivePointerId = MotionEventCompat.getPointerId(ev, newPointerIndex);
+            mLastMotionY = (int) ev.getY(newPointerIndex);
+            mActivePointerId = ev.getPointerId(newPointerIndex);
             if (mVelocityTracker != null) {
                 mVelocityTracker.clear();
             }
@@ -488,12 +454,10 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
         if ((action == MotionEvent.ACTION_MOVE) && (mIsBeingDragged)) {
             return true;
         }
-
-        if(!isEnabled()) {
+        if (!isEnabled()) {
             return false;
         }
-
-        switch (action & MotionEventCompat.ACTION_MASK) {
+        switch (action & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_MOVE: {
                 final int activePointerId = mActivePointerId;
                 if (activePointerId == INVALID_POINTER) {
@@ -501,14 +465,14 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
                     break;
                 }
 
-                final int pointerIndex = MotionEventCompat.findPointerIndex(ev, activePointerId);
+                final int pointerIndex = ev.findPointerIndex(activePointerId);
                 if (pointerIndex == -1) {
                     Log.e(TAG, "Invalid pointerId=" + activePointerId
                             + " in onInterceptTouchEvent");
                     break;
                 }
 
-                final int y = (int) MotionEventCompat.getY(ev, pointerIndex);
+                final int y = (int) ev.getY(pointerIndex);
                 final int yDiff = Math.abs(y - mLastMotionY);
                 if (yDiff > mTouchSlop
                         && (getNestedScrollAxes() & ViewCompat.SCROLL_AXIS_VERTICAL) == 0) {
@@ -525,22 +489,21 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
             }
 
             case MotionEvent.ACTION_DOWN: {
-                final int y = (int) ev.getY();
 
                 /*
                  * Remember location of down touch.
                  * ACTION_DOWN always refers to pointer index 0.
                  */
-                mLastMotionY = y;
-                mActivePointerId = MotionEventCompat.getPointerId(ev, 0);
+                mLastMotionY = (int) ev.getY();
+                mActivePointerId = ev.getPointerId(0);
 
                 initOrResetVelocityTracker();
                 mVelocityTracker.addMovement(ev);
                 /*
-                * If being flinged and user touches the screen, initiate drag;
-                * otherwise don't.  mScroller.isFinished should be false when
-                * being flinged.
-                */
+                 * If being flinged and user touches the screen, initiate drag;
+                 * otherwise don't.  mScroller.isFinished should be false when
+                 * being flinged.
+                 */
                 mIsBeingDragged = !mScroller.isFinished();
                 startNestedScroll(ViewCompat.SCROLL_AXIS_VERTICAL);
                 break;
@@ -554,7 +517,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
                 endDrag();
                 stopNestedScroll();
                 break;
-            case MotionEventCompat.ACTION_POINTER_UP:
+            case MotionEvent.ACTION_POINTER_UP:
                 onSecondaryPointerUp(ev);
                 break;
         }
@@ -564,9 +527,9 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        final int actionMasked = MotionEventCompat.getActionMasked(ev);
+        final int actionMasked = ev.getActionMasked();
         if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
-            tryBounceBack();
+            tryScrollBack();
         }
         return super.dispatchTouchEvent(ev);
     }
@@ -574,14 +537,14 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
 
-        MotionEvent vtev = MotionEvent.obtain(ev);
+        MotionEvent event = MotionEvent.obtain(ev);
 
-        final int actionMasked = MotionEventCompat.getActionMasked(ev);
+        final int actionMasked = ev.getActionMasked();
 
         if (actionMasked == MotionEvent.ACTION_DOWN) {
             mNestedYOffset = 0;
         }
-        vtev.offsetLocation(0, mNestedYOffset);
+        event.offsetLocation(0, mNestedYOffset);
 
         switch (actionMasked) {
             case MotionEvent.ACTION_DOWN: {
@@ -602,23 +565,22 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
 
                 // Remember where the motion event started
                 mLastMotionY = (int) ev.getY();
-                mActivePointerId = MotionEventCompat.getPointerId(ev, 0);
+                mActivePointerId = ev.getPointerId(0);
                 startNestedScroll(ViewCompat.SCROLL_AXIS_VERTICAL);
                 break;
             }
             case MotionEvent.ACTION_MOVE:
-                final int activePointerIndex = MotionEventCompat.findPointerIndex(ev,
-                        mActivePointerId);
+                final int activePointerIndex = ev.findPointerIndex(mActivePointerId);
                 if (activePointerIndex == -1) {
                     Log.e(TAG, "Invalid pointerId=" + mActivePointerId + " in onTouchEvent");
                     break;
                 }
 
-                final int y = (int) MotionEventCompat.getY(ev, activePointerIndex);
+                final int y = (int) ev.getY(activePointerIndex);
                 int deltaY = mLastMotionY - y;
                 if (dispatchNestedPreScroll(0, deltaY, mScrollConsumed, mScrollOffset)) {
                     deltaY -= mScrollConsumed[1];
-                    vtev.offsetLocation(0, mScrollOffset[1]);
+                    event.offsetLocation(0, mScrollOffset[1]);
                     mNestedYOffset += mScrollOffset[1];
                 }
                 if (!mIsBeingDragged && Math.abs(deltaY) > mTouchSlop) {
@@ -641,7 +603,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
                     final int unconsumedY = deltaY - scrolledDeltaY;
                     if (dispatchNestedScroll(0, scrolledDeltaY, 0, unconsumedY, mScrollOffset)) {
                         mLastMotionY -= mScrollOffset[1];
-                        vtev.offsetLocation(0, mScrollOffset[1]);
+                        event.offsetLocation(0, mScrollOffset[1]);
                         mNestedYOffset += mScrollOffset[1];
                     }
                 }
@@ -650,8 +612,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
                 if (mIsBeingDragged) {
                     final VelocityTracker velocityTracker = mVelocityTracker;
                     velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
-                    int initialVelocity = (int) VelocityTrackerCompat.getYVelocity(velocityTracker,
-                            mActivePointerId);
+                    int initialVelocity = (int) velocityTracker.getYVelocity(mActivePointerId);
 
                     if ((Math.abs(initialVelocity) > mMinimumVelocity)) {
                         flingWithNestedDispatch(-initialVelocity);
@@ -667,27 +628,27 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
                     endDrag();
                 }
                 break;
-            case MotionEventCompat.ACTION_POINTER_DOWN: {
-                final int index = MotionEventCompat.getActionIndex(ev);
-                mLastMotionY = (int) MotionEventCompat.getY(ev, index);
-                mActivePointerId = MotionEventCompat.getPointerId(ev, index);
+            case MotionEvent.ACTION_POINTER_DOWN: {
+                final int index = ev.getActionIndex();
+                mLastMotionY = (int) ev.getY(index);
+                mActivePointerId = ev.getPointerId(index);
                 break;
             }
-            case MotionEventCompat.ACTION_POINTER_UP:
+            case MotionEvent.ACTION_POINTER_UP:
                 onSecondaryPointerUp(ev);
-                mLastMotionY = (int) MotionEventCompat.getY(ev,
-                        MotionEventCompat.findPointerIndex(ev, mActivePointerId));
+                mLastMotionY = (int) ev.getY(ev.findPointerIndex(mActivePointerId));
                 break;
         }
 
         if (mVelocityTracker != null) {
-            mVelocityTracker.addMovement(vtev);
+            mVelocityTracker.addMovement(event);
         }
-        vtev.recycle();
+        event.recycle();
         return true;
     }
 
-    protected void onMoveHeader(int state, float progress) {}
+    protected void onMoveHeader(int state, float progress) {
+    }
 
     /**
      * Fling the scroll view
@@ -722,9 +683,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
             mContent.offsetTopAndBottom(-delta);
         }
 
-        if (mActionView != null) {
-            mActionView.offsetTopAndBottom(-delta);
-
+        if (mFlyView != null) {
             mFlyView.offsetTopAndBottom(-delta);
 
             float percentage = mHeaderController.getMovePercentage();
@@ -737,9 +696,7 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
             if (mPullListener != null) {
                 mPullListener.onPullProgress(this, mPullState, percentage);
             }
-
         }
-
         return consumed;
     }
 
@@ -754,15 +711,15 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
             }
             ViewCompat.postInvalidateOnAnimation(this);
         } else {
-            tryBounceBack();
+            tryScrollBack();
         }
     }
 
-    private void tryBounceBack() {
+    private void tryScrollBack() {
         if (mHeaderController.isOverHeight()) {
             mBounceAnim = ObjectAnimator.ofFloat(mHeaderController.getScroll(), 0);
-            mBounceAnim.setInterpolator(new ElasticOutInterpolator());
-            mBounceAnim.setDuration(500);
+            mBounceAnim.setInterpolator(new LinearInterpolator());
+            mBounceAnim.setDuration(200);
             mBounceAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {
@@ -788,7 +745,8 @@ public class PullHeaderLayout extends ViewGroup implements NestedScrollingParent
         }
     }
 
-    public void startRefresh() {}
+    public void startRefresh() {
+    }
 
     @Override
     protected boolean checkLayoutParams(ViewGroup.LayoutParams p) {
